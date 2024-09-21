@@ -18,50 +18,44 @@ data "aws_vpc" "default" {
   default = true
 }
 
+module "blog_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = "dev"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["ap-south-1a", "ap-south-1b", "ap-south-1c"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  tags = {
+    Terraform = "true"
+    Environment = "dev"
+  }
+}
+
 resource "aws_instance" "blog" {
   ami           = data.aws_ami.app_ami.id
   instance_type = var.instance_type
 
-  vpc_security_group_ids = [aws_security_group.sg_blog.id]
+  vpc_security_group_ids = module.blog_sg.security_group_id
+
+  subnet_id = module.blog_vpc.public_subnets[0]
 
   tags = {
     Name = "Learning Terraform"
   }
 }
 
-resource "aws_security_group" "sg_blog" {
-  name = "sg_blog"
-  description = "Allow http & https in. Allow everithing out"
+module "blog_sg" {
+  source = "terraform-aws-modules/security-group/aws"
 
-  vpc_id = data.aws_vpc.default.id
-}
+  name        = "blog_new"
+  description = "Security group for http/https incoming traffic & everithing for outgoing traffic"
+  vpc_id      = module.blog_vpc.vpc_id
 
-resource "aws_security_group_rule" "sg_blog_http_in" {
-  type        = "ingress"
-  from_port   = 80
-  to_port     = 80
-  protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
+  ingress_cidr_blocks      = ["0.0.0.0/0"]
+  ingress_rules            = ["https-443-tcp","http-80-tcp"]
 
-  security_group_id = aws_security_group.sg_blog.id
-}
-
-resource "aws_security_group_rule" "sg_blog_https_in" {
-  type        = "ingress"
-  from_port   = 443
-  to_port     = 443
-  protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
-
-  security_group_id = aws_security_group.sg_blog.id
-}
-
-resource "aws_security_group_rule" "sg_blog_everything_out" {
-  type        = "egress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  cidr_blocks = ["0.0.0.0/0"]
-
-  security_group_id = aws_security_group.sg_blog.id
+  egress_cidr_blocks      = ["0.0.0.0/0"]
+  egress_rules            = ["all-all"]
 }

@@ -46,7 +46,7 @@ module "alb" {
   source = "terraform-aws-modules/alb/aws"
 
   name    = "blog-alb"
-  vpc_id  = module.blog_vpc.vpc_id
+  vpc_id  = module.blog_vpc.id
   subnets = module.blog_vpc.public_subnets
 
   # Security Group
@@ -67,10 +67,8 @@ module "alb" {
   }
 
   listeners = {
-    ex-http-https-redirect = {
       port     = 80
       protocol = "HTTP"
-    }
   }
 
   target_groups = {
@@ -84,8 +82,7 @@ module "alb" {
   }
 
   tags = {
-    Environment = "Development"
-    Project     = "Example"
+    Environment = "dev"
   }
 }
 
